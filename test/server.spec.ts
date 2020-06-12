@@ -224,7 +224,7 @@ describe('server', () => {
   });
 
   describe('content types handling', () => {
-    describe('form-data', async () => {
+    describe('form-data', () => {
       it('handles multiple string', async () => {
         nockAdapter.bind(api.router, {
           '/item/formdata': {

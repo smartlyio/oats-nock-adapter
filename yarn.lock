@@ -340,10 +340,10 @@
     "@types/form-data" "^2.2.1"
     form-data "^3.0.0"
 
-"@smartlyio/oats-runtime@2.4.0":
-  version "2.4.0"
-  resolved "https://registry.yarnpkg.com/@smartlyio/oats-runtime/-/oats-runtime-2.4.0.tgz#0dc13beebd95b427d5e9cbfd6b29fc3597932183"
-  integrity sha512-mnSWraDIMczeS/q8MrTnvfefCR6WSIqjb7AAUssPCrfIflrO+v5BUGcTujQc7vO5GYp4YQLnWvNjWYgegS3p4w==
+"@smartlyio/oats-runtime@^2.5.4":
+  version "2.5.4"
+  resolved "https://registry.yarnpkg.com/@smartlyio/oats-runtime/-/oats-runtime-2.5.4.tgz#a7168d812f7636b8dd4e3cc152300f3beb76f528"
+  integrity sha512-Wj6moTmxtu177TwR6ObPRDnPSdcjWEBo0ZCHOp2t5WgG8ZTbOhOKJlu2NvphU5ieQOVLt56X+pvRgGn2bl0k5g==
   dependencies:
     "@smartlyio/safe-navigation" "^4.0.1"
     lodash "^4.17.4"
