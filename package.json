@@ -21,7 +21,8 @@
     "url": "https://github.com/smartlyio/oats-nock-adapter.git"
   },
   "peerDependencies": {
-    "typescript": "^3.6.3"
+    "typescript": "^3.6.3",
+    "fast-check": "^1.25.1"
   },
   "dependencies": {
     "@smartlyio/safe-navigation": "^4.0.1",
@@ -37,6 +38,7 @@
     "client"
   ],
   "devDependencies": {
+    "fast-check": "^1.25.1",
     "@smartlyio/oats": "^2.3.0",
     "@smartlyio/oats-axios-adapter": "^2.2.0",
     "@smartlyio/oats-runtime": "^2.5.4",
@@ -61,7 +63,7 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testRegex": "(examples|test)/.*\\.spec.ts$",
+    "testRegex": "(examples|test|src)/.*\\.spec.ts$",
     "moduleFileExtensions": [
       "js",
       "json",
