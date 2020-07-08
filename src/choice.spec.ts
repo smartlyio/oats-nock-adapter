@@ -59,6 +59,35 @@ describe('choice', () => {
       });
   }
 
+  describe('value', () => {
+    const arb = fastCheck.integer();
+    function valueModel(c: choice.Choice<'ok', number>) {
+      return c.option({
+        tag: 'opt',
+        behaviours: ['ok'],
+        fn: branch => {
+          return branch.value(arb);
+        }
+      });
+    }
+    it('produces arbitrary values', () =>
+      fastCheck.assert(
+        fastCheck.property(choice.choice<'ok', number>(), c => {
+          const value = valueModel(c).run();
+          expect(typeof value).toEqual('number');
+        })
+      ));
+
+    it('is reproducible', () =>
+      fastCheck.assert(
+        fastCheck.property(choice.choice<'ok', number>(), c => {
+          const value = valueModel(c).run();
+          const value2 = valueModel(c[fastCheck.cloneMethod]()).run();
+          expect(value).toEqual(value2);
+        })
+      ));
+  });
+
   it('allows choice and branching', () =>
     fastCheck.assert(
       fastCheck.property(choice.choice<Bs, number>(), c => {

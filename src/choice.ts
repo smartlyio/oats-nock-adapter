@@ -4,6 +4,9 @@ import * as fastCheck from 'fast-check';
 export class Branch<Behaviour> {
   private choices: Record<string, Choice<Behaviour, unknown>> = {};
   private readonly originalMrng: fastCheck.Random;
+  private shrinkable: fastCheck.Shrinkable<unknown> | undefined;
+  private arb: fastCheck.Arbitrary<unknown> | undefined;
+
   constructor(
     private readonly behaviours: BehaviourFilter<Behaviour>,
     private readonly mrng: fastCheck.Random,
@@ -39,6 +42,8 @@ export class Branch<Behaviour> {
       (memo, key) => ({ ...memo, [key]: this.choices[key].clone() }),
       {}
     );
+    clone.shrinkable = this.shrinkable;
+    clone.arb = this.arb;
     return clone;
   }
 
@@ -47,8 +52,14 @@ export class Branch<Behaviour> {
   };
 
   value<Value>(gen: fastCheck.Arbitrary<Value>): Value {
-    const value = gen.withBias(this.freq).generate(this.mrng);
-    return value.value;
+    if (gen !== this.arb) {
+      this.shrinkable = undefined;
+    }
+    if (!this.shrinkable) {
+      this.shrinkable = gen.withBias(this.freq).generate(this.mrng);
+      this.arb = gen;
+    }
+    return this.shrinkable.value as Value;
   }
 }
 type ChoiceFn<Behaviour, Result> = (choice: Choice<Behaviour, Result>) => Result;
@@ -66,6 +77,8 @@ export class Choice<Behaviour, Result> {
   private position = 0;
   private options: Array<Option<Behaviour, Result>> = [];
   private readonly originalMrng: fastCheck.Random;
+  private shrinkable: fastCheck.Shrinkable<unknown> | undefined;
+  private arb: fastCheck.Arbitrary<unknown> | undefined;
 
   constructor(
     public readonly behaviours: BehaviourFilter<Behaviour>,
@@ -76,8 +89,14 @@ export class Choice<Behaviour, Result> {
   }
 
   value<Value>(gen: fastCheck.Arbitrary<Value>): Value {
-    const value = gen.withBias(this.freq).generate(this.mrng);
-    return value.value;
+    if (gen !== this.arb) {
+      this.shrinkable = undefined;
+    }
+    if (!this.shrinkable) {
+      this.shrinkable = gen.withBias(this.freq).generate(this.mrng);
+      this.arb = gen;
+    }
+    return this.shrinkable.value as Value;
   }
 
   toString(): string {
@@ -102,6 +121,8 @@ export class Choice<Behaviour, Result> {
       tag: selection.tag
     }));
     clone.position = 0;
+    clone.shrinkable = this.shrinkable;
+    clone.arb = this.arb;
     return clone;
   }
 
