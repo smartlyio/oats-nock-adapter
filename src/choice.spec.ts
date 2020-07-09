@@ -3,72 +3,10 @@ import * as choice from './choice';
 
 type Bs = 'ok' | 'fail';
 describe('branch', () => {
-  it('select', () =>
-    fastCheck.assert(
-      fastCheck.property(
-        fastCheck.array(fastCheck.asciiString()),
-        choice.branch<Bs>(),
-        (ctxs, branch) => {
-          const values = ctxs.map(ctx => branch.choice(ctx, () => ctx));
-          expect(values).toEqual(ctxs);
-        }
-      )
-    ));
-
-  it('has trace eq', () =>
-    fastCheck.assert(
-      fastCheck.property(
-        fastCheck.array(fastCheck.asciiString()),
-        choice.branch<Bs>(),
-        (ctxs, branch) => {
-          function ch(c: choice.Choice<Bs, any>) {
-            return c
-              .option({
-                tag: 'first',
-                behaviours: ['ok'],
-                fn: () => '1'
-              })
-              .option({ tag: 'second', behaviours: ['fail'], fn: () => '0' })
-              .run();
-          }
-          const values = ctxs.map(ctx => branch.choice(ctx, ch));
-          const branch2 = branch[fastCheck.cloneMethod]();
-          const values2 = ctxs.map(ctx => branch2.choice(ctx, ch));
-          expect(values).toEqual(values2);
-        }
-      )
-    ));
-});
-
-describe('choice', () => {
-  function model(c: choice.Choice<Bs, number>) {
-    return c
-      .option({
-        tag: 'first',
-        behaviours: ['ok'],
-        fn: branch => {
-          return branch.value(fastCheck.constant(1));
-        }
-      })
-      .option({
-        tag: 'second',
-        behaviours: ['fail'],
-        fn: branch => {
-          return branch.value(fastCheck.constant(0));
-        }
-      });
-  }
-
-  describe('value', () => {
+  describe('generate', () => {
     const arb = fastCheck.integer();
     function valueModel(c: choice.Choice<'ok', number>) {
-      return c.option({
-        tag: 'opt',
-        behaviours: ['ok'],
-        fn: branch => {
-          return branch.value(arb);
-        }
-      });
+      return c.generate(arb, value => value);
     }
     it('produces arbitrary values', () =>
       fastCheck.assert(
@@ -87,6 +25,65 @@ describe('choice', () => {
         })
       ));
   });
+
+  it('select', () =>
+    fastCheck.assert(
+      fastCheck.property(
+        fastCheck.array(fastCheck.asciiString()),
+        choice.branch<Bs>(),
+        (ctxs, branch) => {
+          const values = ctxs.map(ctx =>
+            branch.choice(ctx, choice =>
+              choice.option({
+                behaviours: ['ok'],
+                tag: 'ok',
+                fn: () => ctx
+              })
+            )
+          );
+          expect(values).toEqual(ctxs);
+        }
+      )
+    ));
+
+  it('has trace eq', () =>
+    fastCheck.assert(
+      fastCheck.property(
+        fastCheck.array(fastCheck.asciiString()),
+        choice.branch<Bs>(),
+        (ctxs, branch) => {
+          function ch(c: choice.Choice<Bs, any>) {
+            return c
+              .option({
+                tag: 'first',
+                behaviours: ['ok'],
+                fn: () => '1'
+              })
+              .option({ tag: 'second', behaviours: ['fail'], fn: () => '0' });
+          }
+          const values = ctxs.map(ctx => branch.choice(ctx, ch));
+          const branch2 = branch[fastCheck.cloneMethod]();
+          const values2 = ctxs.map(ctx => branch2.choice(ctx, ch));
+          expect(values).toEqual(values2);
+        }
+      )
+    ));
+});
+
+describe('choice', () => {
+  function model(c: choice.Choice<Bs, number>) {
+    return c
+      .option({
+        tag: 'first',
+        behaviours: ['ok'],
+        fn: () => 1
+      })
+      .option({
+        tag: 'second',
+        behaviours: ['fail'],
+        fn: () => 0
+      });
+  }
 
   it('allows choice and branching', () =>
     fastCheck.assert(

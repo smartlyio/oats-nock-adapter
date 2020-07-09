@@ -4,9 +4,6 @@ import * as fastCheck from 'fast-check';
 export class Branch<Behaviour> {
   private choices: Record<string, Choice<Behaviour, unknown>> = {};
   private readonly originalMrng: fastCheck.Random;
-  private shrinkable: fastCheck.Shrinkable<unknown> | undefined;
-  private arb: fastCheck.Arbitrary<unknown> | undefined;
-
   constructor(
     private readonly behaviours: BehaviourFilter<Behaviour>,
     private readonly mrng: fastCheck.Random,
@@ -34,7 +31,7 @@ export class Branch<Behaviour> {
     if (!choice) {
       this.choices[ctx] = new Choice(this.behaviours, this.mrng, this.freq);
     }
-    return fn(this.choices[ctx] as Choice<Behaviour, Result>);
+    return fn(this.choices[ctx] as Choice<Behaviour, Result>).run();
   }
   clone(mrng?: fastCheck.Random): Branch<Behaviour> {
     const clone = new Branch<Behaviour>(this.behaviours, mrng || this.mrng, this.freq);
@@ -42,27 +39,14 @@ export class Branch<Behaviour> {
       (memo, key) => ({ ...memo, [key]: this.choices[key].clone() }),
       {}
     );
-    clone.shrinkable = this.shrinkable;
-    clone.arb = this.arb;
     return clone;
   }
 
   [fastCheck.cloneMethod] = (): Branch<Behaviour> => {
     return this.clone(this.originalMrng.clone());
   };
-
-  value<Value>(gen: fastCheck.Arbitrary<Value>): Value {
-    if (gen !== this.arb) {
-      this.shrinkable = undefined;
-    }
-    if (!this.shrinkable) {
-      this.shrinkable = gen.withBias(this.freq).generate(this.mrng);
-      this.arb = gen;
-    }
-    return this.shrinkable.value as Value;
-  }
 }
-type ChoiceFn<Behaviour, Result> = (choice: Choice<Behaviour, Result>) => Result;
+type ChoiceFn<Behaviour, Result> = (choice: Choice<Behaviour, Result>) => Choice<Behaviour, Result>;
 type BranchFn<Behaviour, Result> = (branch: Branch<Behaviour>) => Result;
 type BehaviourFilter<Behaviour> = (behaviours: Behaviour[]) => boolean;
 
@@ -77,6 +61,7 @@ export class Choice<Behaviour, Result> {
   private position = 0;
   private options: Array<Option<Behaviour, Result>> = [];
   private readonly originalMrng: fastCheck.Random;
+  private arbHandler: ((value: any) => Result) | undefined;
   private shrinkable: fastCheck.Shrinkable<unknown> | undefined;
   private arb: fastCheck.Arbitrary<unknown> | undefined;
 
@@ -88,7 +73,7 @@ export class Choice<Behaviour, Result> {
     this.originalMrng = this.mrng.clone();
   }
 
-  value<Value>(gen: fastCheck.Arbitrary<Value>): Value {
+  generate<Value>(gen: fastCheck.Arbitrary<Value>, fn: (rnd: Value) => Result): this {
     if (gen !== this.arb) {
       this.shrinkable = undefined;
     }
@@ -96,7 +81,9 @@ export class Choice<Behaviour, Result> {
       this.shrinkable = gen.withBias(this.freq).generate(this.mrng);
       this.arb = gen;
     }
-    return this.shrinkable.value as Value;
+    this.arbHandler = fn;
+    assert(this.options.length === 0, 'cannot have options with generate');
+    return this;
   }
 
   toString(): string {
@@ -131,6 +118,9 @@ export class Choice<Behaviour, Result> {
   };
 
   run(): Result {
+    if (this.arbHandler) {
+      return this.arbHandler(this.shrinkable?.value);
+    }
     if (this.position >= this.selections.length) {
       const options = this.options
         .map((option, index) => ({ option, index }))
