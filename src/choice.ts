@@ -61,9 +61,9 @@ export class Choice<Behaviour, Result> {
   private position = 0;
   private options: Array<Option<Behaviour, Result>> = [];
   private readonly originalMrng: fastCheck.Random;
-  private arbHandler: ((value: any) => Result) | undefined;
-  private shrinkable: fastCheck.Shrinkable<unknown> | undefined;
+  private shrinkable: Array<fastCheck.Shrinkable<unknown>> = [];
   private arb: fastCheck.Arbitrary<unknown> | undefined;
+  private generatorHandler: ((value: any) => Result) | undefined;
 
   constructor(
     public readonly behaviours: BehaviourFilter<Behaviour>,
@@ -74,15 +74,10 @@ export class Choice<Behaviour, Result> {
   }
 
   generate<Value>(gen: fastCheck.Arbitrary<Value>, fn: (rnd: Value) => Result): this {
-    if (gen !== this.arb) {
-      this.shrinkable = undefined;
-    }
-    if (!this.shrinkable) {
-      this.shrinkable = gen.withBias(this.freq).generate(this.mrng);
-      this.arb = gen;
-    }
-    this.arbHandler = fn;
     assert(this.options.length === 0, 'cannot have options with generate');
+    assert(!this.arb || gen === this.arb, 'generator should not change between `generate` calls');
+    this.arb = gen;
+    this.generatorHandler = fn;
     return this;
   }
 
@@ -118,8 +113,11 @@ export class Choice<Behaviour, Result> {
   };
 
   run(): Result {
-    if (this.arbHandler) {
-      return this.arbHandler(this.shrinkable?.value);
+    if (this.arb && this.generatorHandler) {
+      if (this.position >= this.shrinkable.length) {
+        this.shrinkable.push(this.arb.withBias(this.freq).generate(this.mrng));
+      }
+      return this.generatorHandler(this.shrinkable[this.position++].value);
     }
     if (this.position >= this.selections.length) {
       const options = this.options

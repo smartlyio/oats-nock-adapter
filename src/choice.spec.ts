@@ -16,6 +16,33 @@ describe('branch', () => {
         })
       ));
 
+    it('produces a spectrum of arbitrary values on repeat calls', () =>
+      fastCheck.assert(
+        fastCheck.property(choice.choice<'ok', number>(), c => {
+          const values = new Set();
+          for (let count = 0; count < 100; count++) {
+            values.add(valueModel(c).run());
+          }
+          expect(values.size).toBeGreaterThanOrEqual(10);
+        })
+      ));
+
+    it('produces a same sequence', () =>
+      fastCheck.assert(
+        fastCheck.property(choice.choice<'ok', number>(), c => {
+          const values = new Set();
+          for (let count = 0; count < 100; count++) {
+            values.add(valueModel(c).run());
+          }
+          const c2 = c[fastCheck.cloneMethod]();
+          const values2 = new Set();
+          for (let count = 0; count < 100; count++) {
+            values2.add(valueModel(c2).run());
+          }
+          expect(values2).toEqual(values);
+        })
+      ));
+
     it('is reproducible', () =>
       fastCheck.assert(
         fastCheck.property(choice.choice<'ok', number>(), c => {
