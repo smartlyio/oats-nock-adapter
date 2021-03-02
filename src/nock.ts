@@ -109,6 +109,26 @@ function getPathRegex(pathTemplate: string): RegExp {
   return new RegExp(escapedPath.replace(/ ([^ ]+) /g, '([^?/]+)'));
 }
 
+function normalizeHeaderValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    assert(value.length === 1, 'unexpected length of header array');
+    value = value[0];
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  assert.fail(`Unknown header value ${value}`);
+}
+
+function normalizeHeaders(headers: Record<string, unknown> | undefined): Record<string, string> {
+  headers = headers || {};
+  return Object.entries(headers).reduce((memo, [key, value]) => {
+    return {
+      ...memo,
+      [key]: normalizeHeaderValue(value)
+    };
+  }, {});
+}
 export class Server<Spec> {
   private readonly scopes: nock.Scope[] = [];
   private routes: Spec = {} as Spec;
@@ -191,7 +211,8 @@ export class Server<Spec> {
     nock(server)
       [method](getPathRegex(path))
       .reply(async function (uri, requestBody, cb) {
-        const body = getBody(this.req.headers?.['content-type'], requestBody);
+        const headers = normalizeHeaders(this.req.headers);
+        const body = getBody(headers['content-type'], requestBody);
         const url = new URL('http://host-for-nock' + uri);
         try {
           const result = await nocked({
@@ -199,7 +220,7 @@ export class Server<Spec> {
             method,
             servers: [server],
             op,
-            headers: this.req.headers,
+            headers,
             params: getParams(path, uri),
             query: getQuery(url),
             body,
