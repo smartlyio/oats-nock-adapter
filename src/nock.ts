@@ -68,6 +68,10 @@ function getBody(contentType: string | undefined, value: unknown) {
     const boundary = new RegExp('(?:\r\n)?[^\r\n]*' + formData[1] + '[^\r\n]*(?:\r\n)?');
     return { contentType: 'multipart/form-data', value: parseFormData(boundary, value) };
   }
+  const multipartRelatedData = contentType.match(/^multipart\/related.*; boundary=([^;]+)/);
+  if (multipartRelatedData) {
+    return { contentType: 'multipart/related', value: value };
+  }
   return value as any;
 }
 
@@ -116,6 +120,9 @@ function normalizeHeaderValue(value: unknown): string {
   }
   if (typeof value === 'string') {
     return value;
+  }
+  if (typeof value === 'number') {
+    return `${value}`;
   }
   assert.fail(`Unknown header value ${value}`);
 }
